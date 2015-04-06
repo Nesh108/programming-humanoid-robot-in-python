@@ -18,6 +18,7 @@ import numpy as np
 from collections import deque
 from spark_agent import SparkAgent, JOINT_CMD_NAMES
 
+import time
 
 class PIDController(object):
     '''a discretized PID controller, it controls an array of servos,
@@ -35,9 +36,15 @@ class PIDController(object):
         self.e2 = np.zeros(size)
         # ADJUST PARAMETERS BELOW
         delay = 0
-        self.Kp = 0
-        self.Ki = 0
+        self.Kp = 5
+        self.Ki = 5
         self.Kd = 0
+
+        self.Derivator = 0
+        self.Integrator = 0
+        self.Integrator_max = 500
+        self.Integrator_min = -500
+
         self.y = deque(np.zeros(size), maxlen=delay + 1)
 
     def set_delay(self, delay):
@@ -52,7 +59,34 @@ class PIDController(object):
         @param sensor: current values from sensor
         @return control signal
         '''
+
         # YOUR CODE HERE
+        #self.P_value = self.Kp * self.e1
+
+        print "Current Sensors"
+        print sensor
+
+        print "Target Values"
+        print target
+
+        i = 0
+        for current_val,set_point in np.c_[sensor,target]:
+            print "{}# {} --> {}".format(i, current_val, set_point)
+            self.error = set_point - current_val
+            self.p_value = self.Kp * self.error
+            self.d_value = self.Kd * (self.error - self.Derivator)
+            self.Derivator = self.error
+            self.Integrator = self.Integrator + self.error
+            if self.Integrator > self.Integrator_max:
+                    self.Integrator = self.Integrator_max
+            elif self.Integrator < self.Integrator_min:
+                    self.Integrator = self.Integrator_min
+            self.i_value = self.Integrator * self.Ki
+            self.u = np.insert(self.u,i, (self.p_value + self.i_value + self.d_value))
+            i+=1
+
+        print "new PID array:"
+        print self.u
 
         return self.u
 
